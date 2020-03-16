@@ -11,6 +11,9 @@ import re
 from datetime import datetime
 import smtplib
 from argparse import ArgumentParser
+import os
+import json
+
 
 class GettingStats():
     def __init__(self):
@@ -19,13 +22,15 @@ class GettingStats():
         self.chrome_options.add_argument('--no-sandbox')
         self.driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=self.chrome_options)
 
-    def get_wm_data(self, countries):
+    def get_wm_data(self, countries, all):
         """
         Getting Data from WorldMeter
         :param countries: List of countries whose stats we want to fetch
+        :param all: Flag to check all data is required or not
         """
         output_data = '>> According to new stats about coronavirus from worldometers.info:\n'
         countries = {country.lower() for country in countries}
+        all_data = {}
         try:
             print("Getting Data from WorldOMeters")
             pattern_regex = re.compile(r"(?P<name>\w+\s?\D*?\s?)\s(?P<confirmed_cases>\d+\,?\d+|\d?)\s\+?.*",
@@ -35,9 +40,13 @@ class GettingStats():
             table_body = table.text
             for record in table_body.splitlines():
                 match = re.match(pattern_regex, record)
+                if all:
+                    all_data[match.group('name')] = match.group('confirmed_cases')
                 if match.group('name').lower() in countries:
                     output_data += f"Confirmed cases in {match.group('name')} are " \
                                    f"{match.group('confirmed_cases')}\n"
+            if all_data:
+                self.add_to_file(all_data)
             return output_data
         except:
             print("Error :", sys.exc_info()[0])
@@ -96,6 +105,24 @@ class GettingStats():
             server.quit()
             raise
 
+    def add_to_file(self, data):
+        """
+        This method add the data to the file for history
+        :param data: Data to transfer to file
+        """
+        data_file = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data_in_json'))
+        date = datetime.now().strftime('%Y-%m-%d')
+        data_dict = {date: data}
+        if not os.path.isfile(data_file):
+            with open(data_file, mode='w') as file:
+                file.write(json.dumps(data_dict, indent=2))
+        else:
+            with open(data_file) as file:
+                data_json = json.load(file)
+            merge_dict = {**data_json, **data_dict}
+            with open(data_file, mode='w') as f:
+                f.write(json.dumps(merge_dict, indent=2))
+
 
 if __name__ == "__main__":
     parser = ArgumentParser("Script to send latest stats of coronavirua via email")
@@ -103,8 +130,9 @@ if __name__ == "__main__":
                                                                                           "stats you want to check")
     parser.add_argument('--emails', '-e', nargs='+', default=['talk2me@manveerkhurana.com'], help="List of email "
                                                                                                   "addresses")
+    parser.add_argument('--all', '-a', action='store_true', help="This will list data of all the countries")
     args = parser.parse_args()
     stats = GettingStats()
-    all_data = stats.get_wm_data(args.countries)
+    all_data = stats.get_wm_data(args.countries, args.all)
     can_data = stats.get_canada_data()
     stats.send_email(all_data+can_data, args.emails)
