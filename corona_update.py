@@ -13,6 +13,8 @@ import smtplib
 from argparse import ArgumentParser
 import os
 import json
+from pprint import pprint
+from inspect import getmembers
 
 
 class GettingStats():
@@ -60,18 +62,19 @@ class GettingStats():
         ret_text = "\n>> Areas in Canada with cases of COVID-19:\n"
         try:
             print("Getting Data from Canada.ca")
-            self.driver.get('https://www.canada.ca/en/public-health/services/diseases/2019-novel-coronavirus-'
-                            'infection.html')
-            table = self.driver.find_element_by_xpath('/html/body/main/div[3]/table[1]')
+            self.driver.get('https://health-infobase.canada.ca/covid-19/iframe/table.html')
+            table = self.driver.find_element_by_xpath('/html/body/div/table')
             for x in table.text.splitlines()[2:]:
-                pattern_regex = re.compile(r"(?P<name>^\w+\s?\D*?\s?\D*)\s(?P<confirmed_cases>\d{1,3})\s(\d{1,3})",
+                pattern_regex = re.compile(r"(?P<name>^\w+\s?\D*?\s?\D*)\s(?P<confirmed_cases>\d{0,2}?\,?\d{1,5})\s(\d{1,3})\s(?P<deaths>\d{1,3})",
                                            re.MULTILINE)
                 match = re.match(pattern_regex, x)
                 if match:
-                    if not (match.group('name') == 'Total cases'):
-                        ret_text += f"Confirmed cases in {match.group('name')} are {match.group('confirmed_cases')}\n"
+                    if not (match.group('name') == 'Canada'):
+                        ret_text += f"Cases in {match.group('name')} are {match.group('confirmed_cases')} and " \
+                                    f"Deaths are {match.group('deaths')}\n"
                     else:
-                        last_line = f"Total Cases according to canada.ca are {match.group('confirmed_cases')}"
+                        last_line = f"According to canada.ca total confirmed cases are {match.group('confirmed_cases')} " \
+                                    f"and total deaths are {match.group('deaths')}"
             self.driver.close()
             return ret_text+last_line
         except:
