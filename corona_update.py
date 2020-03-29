@@ -38,9 +38,9 @@ class GettingStats():
             pattern_regex = re.compile(r"(?P<name>\w+\s?\D*?\s?)\s(?P<confirmed_cases>\d+\,?\d+|\d?)\s\+?.*",
                                        re.MULTILINE)
             self.driver.get('https://www.worldometers.info/coronavirus/')
-            table = self.driver.find_element_by_xpath('//*[@id="main_table_countries"]/tbody[1]')
+            table = self.driver.find_element_by_xpath('/html/body/div[3]/div[3]/div/div[3]/div[1]/div/table')
             table_body = table.text
-            for record in table_body.splitlines():
+            for record in table_body.splitlines()[12:]:
                 match = re.match(pattern_regex, record)
                 if all:
                     all_data[match.group('name')] = match.group('confirmed_cases')
